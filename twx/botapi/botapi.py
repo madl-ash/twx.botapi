@@ -796,6 +796,9 @@ class InlineKeyboardMarkup:
         self.inline_keyboard = inline_keyboard
 
     def serialize(self):
+        return json.dumps(self.asdict())
+
+    def asdict(self):
         inline_keyboard = []
 
         for button_list in self.inline_keyboard:
@@ -804,9 +807,7 @@ class InlineKeyboardMarkup:
                 temp_list.append(button.serialize())
             inline_keyboard.append(temp_list)
 
-        reply_markup = dict(inline_keyboard=inline_keyboard)
-
-        return json.dumps(reply_markup)
+        return dict(inline_keyboard=inline_keyboard)
 
 
 class InlineKeyboardButton:
@@ -3395,7 +3396,7 @@ def get_updates(offset=None, limit=None, timeout=None, allowed_updates=None,
         offset=offset,
         limit=limit,
         timeout=timeout,
-        allowed_updates=allowed_updates
+        allowed_updates=json.dumps(allowed_updates)
     )
 
     return TelegramBotRPCRequest('getUpdates', params=params, on_result=Update.from_result, **kwargs)
