@@ -17,9 +17,92 @@ import json
 """
 Telegram Bot API Types as defined at https://core.telegram.org/bots/api#available-types
 """
-_UserBase = namedtuple('User', ['id', 'first_name', 'last_name', 'username'])
-class User(_UserBase):
+_UpdateBase = namedtuple('Update', ['update_id', 'message', 'edited_message', 'channel_post', 'edited_channel_post',
+                                    'inline_query', 'chosen_inline_result', 'callback_query'])
 
+
+class Update(_UpdateBase):
+    """This object represents an incoming update.
+
+    Attributes:
+        update_id               (int)                :The update‘s unique identifier. Update identifiers start from a certain
+                                                      positive number and increase sequentially. This ID becomes especially handy
+                                                      if you’re using Webhooks, since it allows you to ignore repeated updates or to
+                                                      restore the correct update sequence, should they get out of order.
+        message                 (Message)            :*Optional.* New incoming message of any kind — text, photo, sticker, etc.
+        edited_message          (Message)            :*Optional.* New version of a message that is known to the bot and was edited.
+        channel_post            (Message)            :*Optional.* New incoming channel post of any kind — text, photo, sticker, etc.
+        edited_channel_post     (Message)            :*Optional.* New version of a channel post that is known to the bot and was edited
+        inline_query            (InlineQuery)        :*Optional.* New incoming inline query
+        chosen_inline_result	(ChosenInlineResult) :*Optional.* The result of a inline query that was chosen by
+                                                      a user and sent to their chat partner
+        callback_query          (CallbackQuery)      :*Optional.* New incoming callback query
+
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def from_dict(message_update):
+        if message_update is None:
+            return None
+
+        return Update(
+            message_update.get('update_id'),
+            Message.from_result(message_update.get('message')),
+            Message.from_result(message_update.get('edited_message')),
+            Message.from_result(message_update.get('channel_post')),
+            Message.from_result(message_update.get('edited_channel_post')),
+            InlineQuery.from_result(message_update.get('inline_query')),
+            ChosenInlineResult.from_result(message_update.get('chosen_inline_result')),
+            CallbackQuery.from_result(message_update.get('callback_query'))
+        )
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+        updates = [Update.from_dict(message_update) for message_update in result]
+        return updates
+
+
+_WebhookInfoBase = namedtuple('WebhookInfo',
+                              ['url', 'has_custom_certificate', 'pending_update_count', 'last_error_date',
+                               'last_error_message', 'max_connections', 'allowed_updates'])
+
+
+class WebhookInfo(_WebhookInfoBase):
+    """
+    Contains information about the current status of a webhook.
+
+    Attributes:
+        url                     (str) :Webhook URL, may be empty if webhook is not set up
+        has_custom_certificate  (bool :True, if a custom certificate was provided for webhook certificate checks
+        pending_update_count    (int) :Number of updates awaiting delivery
+        last_error_date         (int) :*Optional.* Unix time for the most recent error that happened when trying to deliver an update via webhook
+        last_error_message      (str) :*Optional.* Error message in human-readable format for the most recent error that happened when trying to deliver an update via webhook
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+
+        return WebhookInfo(
+            url=result.get('url'),
+            has_custom_certificate=result.get('has_custom_certificate'),
+            pending_update_count=result.get('pending_update_count'),
+            last_error_date=result.get('last_error_date'),
+            last_error_message=result.get('last_error_message'),
+            max_connections=result.get('max_connections'),
+            allowed_updates=result.get('allowed_updates')
+        )
+
+
+_UserBase = namedtuple('User', ['id', 'first_name', 'last_name', 'username'])
+
+
+class User(_UserBase):
     """This object represents a Telegram user or bot.
 
     Attributes:
@@ -41,49 +124,13 @@ class User(_UserBase):
             first_name=result.get('first_name'),
             last_name=result.get('last_name'),
             username=result.get('username')
-            )
+        )
 
 
-_ChatMemberBase = namedtuple('ChatMember', ['user', 'status'])
-class ChatMember(_ChatMemberBase):
-    """This object contains information about one member of the chat.
-
-    Attributes:
-        user (User): Information about the user
-        status (str): The member's status in the chat. Can be “creator”, “administrator”, “member”, “left” or “kicked”
+_ChatBase = namedtuple('Chat',
+                       ['id', 'type', 'title', 'username', 'first_name', 'last_name', 'all_members_are_administrators'])
 
 
-    """
-    __slots__ = ()
-
-    @staticmethod
-    def from_result(result):
-        if result is None:
-            return None
-
-        return ChatMember(
-            user=User.from_result(result.get('user')),
-            status=result.get('status'),
-            )
-
-    @staticmethod
-    def from_result_list(results):
-        if results is None:
-            return None
-
-        ret = []
-        for result in results:
-            ret.append(
-                User(
-                    user=User.from_result(result.get('user')),
-                    status=result.get('status'),
-                )
-            )
-
-        return ret
-
-
-_ChatBase = namedtuple('Chat', ['id', 'type', 'title', 'username', 'first_name', 'last_name', 'all_members_are_administrators'])
 class Chat(_ChatBase):
     """This object represents a chat.
 
@@ -114,15 +161,16 @@ class Chat(_ChatBase):
             all_members_are_administrators=result.get('all_members_are_administrators'),
         )
 
-_MessageBase = namedtuple('Message', [
-    'message_id', 'sender', 'date', 'edit_date', 'chat', 'forward_from', 'forward_from_chat', 'forward_from_message_id', 'forward_date',
-    'reply_to_message', 'text', 'entities', 'audio', 'document', 'photo', 'sticker',
-    'video', 'voice', 'caption', 'contact', 'location', 'venue', 'new_chat_member',
-    'left_chat_member', 'new_chat_title', 'new_chat_photo', 'delete_chat_photo',
-    'group_chat_created', 'supergroup_chat_created', 'channel_chat_created', 'migrate_to_chat_id',
-    'migrate_from_chat_id', 'pinned_message'])
-class Message(_MessageBase):
 
+_MessageBase = namedtuple('Message', [
+    'message_id', 'sender', 'date', 'chat', 'forward_from', 'forward_from_chat', 'forward_from_message_id',
+    'forward_date', 'reply_to_message', 'edit_date', 'text', 'entities', 'audio', 'document', 'game', 'photo',
+    'sticker', 'video', 'voice', 'caption', 'contact', 'location', 'venue', 'new_chat_member', 'left_chat_member',
+    'new_chat_title', 'new_chat_photo', 'delete_chat_photo', 'group_chat_created', 'supergroup_chat_created',
+    'channel_chat_created', 'migrate_to_chat_id', 'migrate_from_chat_id', 'pinned_message'])
+
+
+class Message(_MessageBase):
     """This object represents a message.
 
     Attributes:
@@ -193,12 +241,12 @@ class Message(_MessageBase):
             return None
 
         # photo is a list of PhotoSize
-        photo = result.get('photo')
+        photo = result.get('photo', None)
         if photo is not None:
             photo = [PhotoSize.from_result(photo_size) for photo_size in photo]
 
         # entities is a list of MessageEntity
-        entities = result.get('entities')
+        entities = result.get('entities', None)
         if entities is not None:
             entities = [MessageEntity.from_result(entity) for entity in entities]
 
@@ -206,17 +254,18 @@ class Message(_MessageBase):
             message_id=result.get('message_id'),
             sender=User.from_result(result.get('from')),
             date=result.get('date'),
-            edit_date=result.get('edit_date'),
             chat=Chat.from_result(result.get('chat')),
             forward_from=User.from_result(result.get('forward_from')),
             forward_from_chat=Chat.from_result(result.get('forward_from_chat')),
-            forward_from_message_id=Message.from_result(result.get('forward_from_message_id')),
+            forward_from_message_id=result.get('forward_from_message_id'),
             forward_date=result.get('forward_date'),
             reply_to_message=Message.from_result(result.get('reply_to_message')),
+            edit_date=result.get('edit_date'),
             text=result.get('text'),
             entities=entities,
             audio=Audio.from_result(result.get('audio')),
-            document=Document.from_result(result.get('document')),
+            document=Document.from_result(result.get('document')),  # TODO : ADD GAME class and game to updates
+            game=Game.from_result(result.get('game')),  # TODO : check GameBase
             photo=photo,
             sticker=Sticker.from_result(result.get('sticker')),
             video=Video.from_result(result.get('video')),
@@ -240,6 +289,8 @@ class Message(_MessageBase):
 
 
 _MessageEntityBase = namedtuple('MessageEntity', ['type', 'offset', 'length', 'url', 'user'])
+
+
 class MessageEntity(_MessageEntityBase):
     """This object represents a chat.
 
@@ -250,7 +301,7 @@ class MessageEntity(_MessageEntityBase):
         offset	(int)	:Offset in UTF-16 code units to the start of the entity
         length	(int)	:Length of the entity in UTF-16 code units
         url	    (str)	:*Optional.* For “text_link” only, url that will be opened after user taps on the text
-        user    (User0  :*Optional.* For “text_mention” only, the mentioned user
+        user    (User)  :*Optional.* For “text_mention” only, the mentioned user
     """
 
     __slots__ = ()
@@ -270,8 +321,9 @@ class MessageEntity(_MessageEntityBase):
 
 
 _PhotoSizeBase = namedtuple('PhotoSize', ['file_id', 'width', 'height', 'file_size'])
-class PhotoSize(_PhotoSizeBase):
 
+
+class PhotoSize(_PhotoSizeBase):
     """This object represents one size of a photo or a file / sticker thumbnail.
 
     Attributes:
@@ -292,12 +344,13 @@ class PhotoSize(_PhotoSizeBase):
             width=result.get('width'),
             height=result.get('height'),
             file_size=result.get('file_size')
-            )
+        )
 
 
 _AudioBase = namedtuple('Audio', ['file_id', 'duration', 'performer', 'title', 'mime_type', 'file_size'])
-class Audio(_AudioBase):
 
+
+class Audio(_AudioBase):
     """This object represents a generic audio file (not voice note).
 
     Attributes:
@@ -323,12 +376,13 @@ class Audio(_AudioBase):
             title=result.get('title'),
             mime_type=result.get('mime_type'),
             file_size=result.get('file_size')
-            )
+        )
 
 
 _DocumentBase = namedtuple('Document', ['file_id', 'thumb', 'file_name', 'mime_type', 'file_size'])
-class Document(_DocumentBase):
 
+
+class Document(_DocumentBase):
     """This object represents a general file (as opposed to photos and audio files).
 
     Attributes:
@@ -352,12 +406,13 @@ class Document(_DocumentBase):
             file_name=result.get('file_name'),
             mime_type=result.get('mime_type'),
             file_size=result.get('file_size')
-            )
+        )
 
 
 _StickerBase = namedtuple('Sticker', ['file_id', 'width', 'height', 'thumb', 'emoji', 'file_size'])
-class Sticker(_StickerBase):
 
+
+class Sticker(_StickerBase):
     """This object represents a sticker.
 
     Attributes:
@@ -383,13 +438,14 @@ class Sticker(_StickerBase):
             thumb=PhotoSize.from_result(result.get('thumb')),
             emoji=result.get('emoji'),
             file_size=result.get('file_size')
-            )
+        )
 
 
 _VideoBase = namedtuple('Video', [
     'file_id', 'width', 'height', 'duration', 'thumb', 'mime_type', 'file_size'])
-class Video(_VideoBase):
 
+
+class Video(_VideoBase):
     """This object represents a video file.
 
     Attributes:
@@ -417,12 +473,13 @@ class Video(_VideoBase):
             thumb=PhotoSize.from_result(result.get('thumb')),
             mime_type=result.get('mime_type'),
             file_size=result.get('file_size')
-            )
+        )
 
 
 _VoiceBase = namedtuple('Voice', ['file_id', 'duration', 'mime_type', 'file_size'])
-class Voice(_VoiceBase):
 
+
+class Voice(_VoiceBase):
     """This object represents an voice node audio file.
 
     Attributes:
@@ -448,8 +505,9 @@ class Voice(_VoiceBase):
 
 
 _ContactBase = namedtuple('Contact', ['phone_number', 'first_name', 'last_name', 'user_id'])
-class Contact(_ContactBase):
 
+
+class Contact(_ContactBase):
     """This object represents a phone contact.
 
     Attributes:
@@ -471,12 +529,13 @@ class Contact(_ContactBase):
             first_name=result.get('first_name'),
             last_name=result.get('last_name'),
             user_id=result.get('user_id')
-            )
+        )
 
 
 _LocationBase = namedtuple('Location', ['longitude', 'latitude'])
-class Location(_LocationBase):
 
+
+class Location(_LocationBase):
     """This object represents a point on the map.
 
     Attributes:
@@ -494,12 +553,13 @@ class Location(_LocationBase):
         return Location(
             longitude=result.get('longitude'),
             latitude=result.get('latitude')
-            )
+        )
 
 
 _VenueBase = namedtuple('Venue', ['location', 'title', 'address', 'foursquare_id'])
-class Venue(_VenueBase):
 
+
+class Venue(_VenueBase):
     """This object represents a venue.
 
     Attributes:
@@ -523,227 +583,10 @@ class Venue(_VenueBase):
         )
 
 
-_GameBase = namedtuple('Game', ['title', 'description', 'photo', 'text', 'text_entities', 'animation'])
-class Game(_GameBase):
-
-    """This object represents a game. Use BotFather to create and edit games, their short names will act as unique identifiers.
-
-
-    Attributes:
-        title          (str)                     :Title of the game
-        description    (str)                     :Description of the game
-        photo          (Sequence[PhotoSize])     :Photo that will be displayed in the game message in chats.
-        text           (str)                     :*Optional.* Brief description of the game or high scores included in the game message. Can be automatically
-                                                              edited to include current high scores for the game when the bot calls setGameScore, or manually
-                                                              edited using editMessageText. 0-4096 characters.
-        text_entities  (Sequence[MessageEntity]) :*Optional.* Special entities that appear in text, such as usernames, URLs, bot commands, etc.
-        animation      (Animation)               :*Optional.* Animation that will be displayed in the game message in chats. Upload via BotFather
-    """
-    __slots__ = ()
-
-    @staticmethod
-    def from_result(result):
-        if result is None:
-            return None
-
-        # photo is a list of PhotoSize
-        photo = result.get('photo')
-        if photo is not None:
-            photo = [PhotoSize.from_result(photo_size) for photo_size in photo]
-
-        # entities is a list of MessageEntity
-        text_entities = result.get('entities')
-        if text_entities is not None:
-            text_entities = [MessageEntity.from_result(entity) for entity in text_entities]
-
-        return Game(
-            title=result.get('title'),
-            description=result.get('description'),
-            photo=photo,
-            text=result.get('text'),
-            text_entities=text_entities,
-            animation=Animation.from_result(result.get('animation')),
-        )
-
-
-_AnimationBase = namedtuple('Animation', ['file_id', 'thumb', 'file_name', 'mime_type', 'file_size'])
-class Animation(_GameBase):
-    """You can provide an animation for your game so that it looks stylish in chats. This object represents an animation file to be
-    displayed in the message containing a game.
-
-    Attributes:
-        file_id    (str)        :Unique file identifier
-        thumb      (PhotoSize)  :*Optional.* Animation thumbnail as defined by sender
-        file_name  (str)        :*Optional.* Original animation filename as defined by sender
-        mime_type  (str)        :*Optional.* MIME type of the file as defined by sender
-        file_size  (int)        :*Optional.* File size
-    """
-    __slots__ = ()
-
-    @staticmethod
-    def from_result(result):
-        if result is None:
-            return None
-
-        return Animation(
-            file_id=result.get('file_id'),
-            thumb=PhotoSize.from_result(result.get('thumb')),
-            file_name=result.get('file_name'),
-            mime_type=result.get('mime_type'),
-            file_size=result.get('file_size')
-            )
-
-
-_GameHighScoreBase = namedtuple('GameHighScore', ['position', 'user', 'score'])
-class GameHighScore(_GameHighScoreBase):
-    """
-    This object represents one row of the high scores table for a game.
-
-    Attributes:
-        position    (int)  :Position in high score table for the game
-        user        (User) :User
-        score       (int)  :Score
-    """
-
-    __slots__ = ()
-
-    @staticmethod
-    def from_result(result):
-        if result is None:
-            return None
-
-        return GameHighScore(
-            position=result.get('position'),
-            user=User.from_result(result.get('user')),
-            score=result.get('score'),
-        )
-
-    @staticmethod
-    def from_array_result(result):
-        if result is None:
-            return None
-
-        [GameHighScore.from_result(score) for score in result]
-
-_WebhookInfoBase = namedtuple('WebhookInfo', ['url', 'has_custom_certificate', 'pending_update_count', 'last_error_date', 'last_error_message'])
-class WebhookInfo(_WebhookInfoBase):
-    """
-    Contains information about the current status of a webhook.
-
-    Attributes:
-        url                     (str) :Webhook URL, may be empty if webhook is not set up
-        has_custom_certificate  (bool :True, if a custom certificate was provided for webhook certificate checks
-        pending_update_count    (int) :Number of updates awaiting delivery
-        last_error_date         (int) :*Optional.* Unix time for the most recent error that happened when trying to deliver an update via webhook
-        last_error_message      (str) :*Optional.* Error message in human-readable format for the most recent error that happened when trying to deliver an update via webhook
-    """
-    __slots__ = ()
-
-    @staticmethod
-    def from_result(result):
-        if result is None:
-            return None
-
-        return WebhookInfo(
-            url=result.get('url'),
-            has_custom_certificate=result.get('has_custom_certificate'),
-            pending_update_count=result.get('pending_update_count'),
-            last_error_date=result.get('last_error_date'),
-            last_error_message=result.get('last_error_message'),
-        )
-
-_UpdateBase = namedtuple('Update', ['update_id', 'message', 'edited_message', 'channel_post', 'edited_channel_post', 'inline_query', 'chosen_inline_result', 'callback_query'])
-class Update(_UpdateBase):
-
-    """This object represents an incoming update.
-
-    Attributes:
-        update_id               (int)                :The update‘s unique identifier. Update identifiers start from a certain
-                                                      positive number and increase sequentially. This ID becomes especially handy
-                                                      if you’re using Webhooks, since it allows you to ignore repeated updates or to
-                                                      restore the correct update sequence, should they get out of order.
-        message                 (Message)            :*Optional.* New incoming message of any kind — text, photo, sticker, etc.
-        edited_message          (Message)            :*Optional.* New version of a message that is known to the bot and was edited.
-        channel_post            (Message)            :*Optional.* New incoming channel post of any kind — text, photo, sticker, etc.
-        edited_channel_post     (Message)            :*Optional.* New version of a channel post that is known to the bot and was edited
-        inline_query            (InlineQuery)        :*Optional.* New incoming inline query
-        chosen_inline_result	(ChosenInlineResult) :*Optional.* The result of a inline query that was chosen by
-                                                      a user and sent to their chat partner
-        callback_query          (CallbackQuery)      :*Optional.* New incoming callback query
-
-    """
-    __slots__ = ()
-
-    @staticmethod
-    def from_dict(message_update):
-        if message_update is None:
-            return None
-
-        return Update(message_update.get('update_id'),
-                      Message.from_result(message_update.get('message')),
-                      Message.from_result(message_update.get('edited_message')),
-                      Message.from_result(message_update.get('channel_post')),
-                      Message.from_result(message_update.get('edited_channel_post')),
-                      InlineQuery.from_result(message_update.get('inline_query')),
-                      ChosenInlineResult.from_result(message_update.get('chosen_inline_result')),
-                      CallbackQuery.from_result(message_update.get('callback_query')))
-
-    @staticmethod
-    def from_result(result):
-        if result is None:
-            return None
-        updates = [Update.from_dict(message_update) for message_update in result]
-        return updates
-
-
-_InputFileInfoBase = namedtuple('InputFileInfo', ['file_name', 'fp', 'mime_type'])
-class InputFileInfo(_InputFileInfoBase):
-    """This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data
-            in the usual way that files are uploaded via the browser.
-
-            Attributes:
-                file_name        (str)           :The full file name
-                fp               (file object)   :File object obtained via open()
-                mime_type        (str)           :*Optional.* Mimetype to use when sending.
-
-        """
-    __slots__ = ()
-
-
-_InputFileBase = namedtuple('InputFile', ['form', 'file_info'])
-class InputFile(_InputFileBase):
-    """This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data
-        in the usual way that files are uploaded via the browser.
-
-        Attributes:
-            form        (str)           :the form used to submit (e.g. 'photo')
-            file_info   (InputFileInfo) :The file metadata required
-
-        :Example:
-
-            ::
-
-                fp = open('foo.png', 'rb')
-                file_info = InputFileInfo('foo.png', fp, 'image/png')
-
-                InputFile('photo', file_info)
-
-                bot.send_photo(chat_id=12345678, photo=InputFile)
-
-            .. note::
-
-                While creating the FileInput currently requires a reasonable amount
-                of preparation just to send a file. This class will be extended
-                in the future to make the process easier.
-    """
-    __slots__ = ()
-
-
-
-
 _UserProfilePhotosBase = namedtuple('UserProfilePhotos', ['total_count', 'photos'])
-class UserProfilePhotos(_UserProfilePhotosBase):
 
+
+class UserProfilePhotos(_UserProfilePhotosBase):
     """This object represent a user's profile pictures.
 
     Attributes:
@@ -765,12 +608,13 @@ class UserProfilePhotos(_UserProfilePhotosBase):
         return UserProfilePhotos(
             total_count=result.get('total_count'),
             photos=photos
-            )
+        )
 
 
 _FileBase = namedtuple('File', ['file_id', 'file_size', 'file_path'])
-class File(_FileBase):
 
+
+class File(_FileBase):
     """This object represents a file ready to be downloaded.
 
     Attributes:
@@ -802,31 +646,11 @@ class ReplyMarkup:
         raise NotImplementedError("")
 
 
-_KeyboardButtonBase = namedtuple('KeyboardButton', ['text', 'request_contact', 'request_location'])
-class KeyboardButton(_KeyboardButtonBase):
-    """This object represents one button of the reply keyboard. For simple text buttons String can be used instead
-       of this object to specify text of the button. Optional fields are mutually exclusive.
-
-    Attributes:
-        text (str): Unique identifier for this file
-        request_contact (bool): *Optional.* If True, the user's phone number will be sent as a contact when the
-                                button is pressed. Available in private chats only
-        request_location (bool): *Optional.* If True, the user's current location will be sent when the button
-                                 is pressed. Available in private chats only
-    """
-    __slots__ = ()
-
-    @staticmethod
-    def create(text, request_contact=None, request_location=None):
-        if request_contact == request_location and (request_contact or request_location):
-            raise ValueError("Optional fields are mutually exclusive")
-        return KeyboardButton(text, request_contact, request_location)
-
-
 _ReplyKeyboardMarkupBase = namedtuple('ReplyKeyboardMarkup', [
     'keyboard', 'resize_keyboard', 'one_time_keyboard', 'selective'])
-class ReplyKeyboardMarkup(_ReplyKeyboardMarkupBase, ReplyMarkup):
 
+
+class ReplyKeyboardMarkup(_ReplyKeyboardMarkupBase, ReplyMarkup):
     """This object represents a custom keyboard with reply options (see Introduction to bots for details and examples).
 
     Attributes:
@@ -885,11 +709,34 @@ class ReplyKeyboardMarkup(_ReplyKeyboardMarkupBase, ReplyMarkup):
         return json.dumps(reply_markup)
 
 
+_KeyboardButtonBase = namedtuple('KeyboardButton', ['text', 'request_contact', 'request_location'])
+
+
+class KeyboardButton(_KeyboardButtonBase):
+    """This object represents one button of the reply keyboard. For simple text buttons String can be used instead
+       of this object to specify text of the button. Optional fields are mutually exclusive.
+
+    Attributes:
+        text (str): Unique identifier for this file
+        request_contact (bool): *Optional.* If True, the user's phone number will be sent as a contact when the
+                                button is pressed. Available in private chats only
+        request_location (bool): *Optional.* If True, the user's current location will be sent when the button
+                                 is pressed. Available in private chats only
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def create(text, request_contact=None, request_location=None):
+        if request_contact == request_location and (request_contact or request_location):
+            raise ValueError("Optional fields are mutually exclusive")
+        return KeyboardButton(text, request_contact, request_location)
+
 
 class ReplyKeyboardHide():
     """
     DEPRECATED: ReplyKeyboardHide is now ReplyKeyboardRemove
     """
+
     @staticmethod
     def create(selective=None):
         print("DEPRECATED: ReplyKeyboardHide is now ReplyKeyboardRemove")
@@ -897,8 +744,9 @@ class ReplyKeyboardHide():
 
 
 _ReplyKeyboardRemoveBase = namedtuple('ReplyKeyboardRemove', ['remove_keyboard', 'selective'])
-class ReplyKeyboardRemove(_ReplyKeyboardRemoveBase, ReplyMarkup):
 
+
+class ReplyKeyboardRemove(_ReplyKeyboardRemoveBase, ReplyMarkup):
     """Upon receiving a message with this object, Telegram clients will remove the current
        custom keyboard and display the default letter-keyboard. By default, custom keyboards
        are displayed until a new keyboard is sent by a bot. An exception is made for one-time
@@ -928,8 +776,8 @@ class ReplyKeyboardRemove(_ReplyKeyboardRemoveBase, ReplyMarkup):
 
     def serialize(self):
         reply_markup = dict(
-            hide_keyboard=True
-            )
+            remove_keyboard=True
+        )
 
         if self.selective is not None:
             reply_markup['selective'] = bool(self.selective)
@@ -937,11 +785,126 @@ class ReplyKeyboardRemove(_ReplyKeyboardRemoveBase, ReplyMarkup):
         return json.dumps(reply_markup)
 
 
+class InlineKeyboardMarkup:
+    """ This object represents an inline keyboard that appears right next to the message it belongs to.
+
+    Attributes:
+        inline_keyboard     (Sequence[Sequence[InlineKeyboardButton]])  :Array of button rows, each represented by an Array of InlineKeyboardButton objects
+    """
+
+    def __init__(self, inline_keyboard):
+        self.inline_keyboard = inline_keyboard
+
+    def serialize(self):
+        inline_keyboard = []
+
+        for button_list in self.inline_keyboard:
+            temp_list = []
+            for button in button_list:
+                temp_list.append(button.serialize())
+            inline_keyboard.append(temp_list)
+
+        reply_markup = dict(inline_keyboard=inline_keyboard)
+
+        return json.dumps(reply_markup)
+
+
+class InlineKeyboardButton:
+    """ This object represents one button of an inline keyboard. You must use exactly one of the optional fields.
+
+    Attributes:
+        text     (str)  :Label text on the button
+        url      (str)  :*Optional.* HTTP url to be opened when button is pressed
+        callback_data (str) :*Optional.* Data to be sent in a callback query to the bot when button is pressed
+
+        switch_inline_query (str) :*Optional.* If set, pressing the button will prompt the user to select
+                                   one of their chats, open that chat and insert the bot‘s username and
+                                   the specified inline query in the input field. Can be empty, in which case just the bot’s username will be inserted.
+
+                                   Note: This offers an easy way for users to start using your bot in inline mode when they are currently in a private
+                                   chat with it. Especially useful when combined with switch_pm… actions – in this case the user will be automatically
+                                   returned to the chat they switched from, skipping the chat selection screen.
+        switch_inline_query_current_chat (str) :*Optional.* If set, pressing the button will insert the bot‘s username and the specified inline query
+                                                in the current chat's input field. Can be empty, in which case only the bot’s username will be inserted.
+
+                                                This offers a quick way for the user to open your bot in inline mode in the same chat – good for
+                                                selecting something from multiple options.
+        callback_game (str) :*Optional.*  Description of the game that will be launched when the user presses the button.
+
+                                          NOTE: This type of button must always be the first button in the first row.
+    """
+
+    def __init__(self, text, url=None, callback_data=None, switch_inline_query=None,
+                 switch_inline_query_current_chat=None, callback_game=None):
+        self.text = text
+        self.url = url
+        self.callback_data = callback_data
+        self.switch_inline_query = switch_inline_query
+        self.switch_inline_query_current_chat = switch_inline_query_current_chat
+        self.callback_game = callback_game
+
+        if url is None and callback_data is None and switch_inline_query is None:
+            raise ValueError("You must use exactly one of the optional fields.")
+
+    def serialize(self):
+        reply_markup = dict()
+
+        reply_markup['text'] = self.text
+        if self.url is not None:
+            reply_markup['url'] = self.url
+        if self.callback_data is not None:
+            reply_markup['callback_data'] = self.callback_data
+        if self.switch_inline_query is not None:
+            reply_markup['switch_inline_query'] = self.switch_inline_query
+        if self.switch_inline_query_current_chat is not None:
+            reply_markup['switch_inline_query_current_chat'] = self.switch_inline_query_current_chat
+
+        return reply_markup
+
+
+_CallbackQueryBase = namedtuple('CallbackQuery',
+                                ['id', 'sender', 'message', 'inline_message_id', 'chat_instance', 'data',
+                                 'game_short_name'])
+
+
+class CallbackQuery(_CallbackQueryBase):
+    """ This object represents an incoming callback query from a callback button in an inline keyboard. If
+        the button that originated the query was attached to a message sent by the bot, the field message
+        will be presented. If the button was attached to a message sent via the bot (in inline mode), the
+        field inline_message_id will be presented.
+
+
+    Attributes:
+        id                 (str)      :Unique identifier for this query.
+        sender             (User)     :Sender.
+        message            (Message)  :*Optional.* Message with the callback button that originated the query. Note
+                                       that message content and message date will not be available if the message is too old
+        inline_message_id  (str)      :*Optional.* Identifier of the message sent via the bot in inline mode, that originated the query
+        data               (str)      :Data associated with the callback button. Be aware that a bad client can send arbitrary data in this field
+
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+
+        return CallbackQuery(
+            id=result.get('id'),
+            sender=User.from_result(result.get('from')),
+            message=Message.from_result(result.get('message')),
+            inline_message_id=result.get('inline_message_id'),
+            chat_instance=result.get('chat_instance'),
+            data=result.get('data'),
+            game_short_name=result.get('game_short_name')
+        )
+
+
 _ForceReplyBase = namedtuple('ForceReply', ['force_reply', 'selective'])
 
 
 class ForceReply(_ForceReplyBase, ReplyMarkup):
-
     """Upon receiving a message with this object, Telegram clients will display a reply interface to the user
         (act as if the user has selected the bot‘s message and tapped ’Reply'). This can be extremely useful
         if you want to create user-friendly step-by-step interfaces without having to sacrifice privacy mode.
@@ -981,7 +944,118 @@ class ForceReply(_ForceReplyBase, ReplyMarkup):
         return json.dumps(reply_markup)
 
 
+_ChatMemberBase = namedtuple('ChatMember', ['user', 'status'])
+
+
+class ChatMember(_ChatMemberBase):
+    """This object contains information about one member of the chat.
+
+    Attributes:
+        user (User): Information about the user
+        status (str): The member's status in the chat. Can be “creator”, “administrator”, “member”, “left” or “kicked”
+
+
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+
+        return ChatMember(
+            user=User.from_result(result.get('user')),
+            status=result.get('status'),
+        )
+
+    @staticmethod
+    def from_result_list(results):
+        if results is None:
+            return None
+
+        ret = []
+        for result in results:
+            ret.append(
+                User(
+                    user=User.from_result(result.get('user')),
+                    status=result.get('status'),
+                )
+            )
+
+        return ret
+
+
+_ResponseParametersBase = namedtuple('ResponseParameters', ['migrate_to_chat_id', 'retry_after'])
+
+
+class ResponseParameters(_ResponseParametersBase):
+    _slots__ = ()
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+
+        return ResponseParameters(
+            migrate_to_chat_id=result.get('migrate_to_chat_id'),
+            retry_after=result.get('retry_after')
+        )
+
+
+_InputFileInfoBase = namedtuple('InputFileInfo', ['file_name', 'fp', 'mime_type'])
+
+
+class InputFileInfo(_InputFileInfoBase):
+    """This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data
+            in the usual way that files are uploaded via the browser.
+
+            Attributes:
+                file_name        (str)           :The full file name
+                fp               (file object)   :File object obtained via open()
+                mime_type        (str)           :*Optional.* Mimetype to use when sending.
+
+        """
+    __slots__ = ()
+
+
+_InputFileBase = namedtuple('InputFile', ['form', 'file_info'])
+
+
+class InputFile(_InputFileBase):
+    """This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data
+        in the usual way that files are uploaded via the browser.
+
+        Attributes:
+            form        (str)           :the form used to submit (e.g. 'photo')
+            file_info   (InputFileInfo) :The file metadata required
+
+        :Example:
+
+            ::
+
+                fp = open('foo.png', 'rb')
+                file_info = InputFileInfo('foo.png', fp, 'image/png')
+
+                InputFile('photo', file_info)
+
+                bot.send_photo(chat_id=12345678, photo=InputFile)
+
+            .. note::
+
+                While creating the FileInput currently requires a reasonable amount
+                of preparation just to send a file. This class will be extended
+                in the future to make the process easier.
+    """
+    __slots__ = ()
+
+
+"""
+InlineQuery Types
+"""
+
 _InlineQueryBase = namedtuple('InlineQuery', ['id', 'sender', 'location', 'query', 'offset'])
+
+
 class InlineQuery(_InlineQueryBase):
     """ This object represents an incoming inline query. When the user sends an empty query,
         your bot could return some default or trending results.
@@ -1007,149 +1081,8 @@ class InlineQuery(_InlineQueryBase):
             location=Location.from_result(result.get('location')),
             query=result.get('query'),
             offset=result.get('offset'),
-            )
-
-
-_ChosenInlineResultBase = namedtuple('ChosenInlineResult', ['result_id', 'sender', 'query'])
-class ChosenInlineResult(_ChosenInlineResultBase):
-    """ This object represents an incoming inline query. When the user sends an empty query,
-        your bot could return some default or trending results.
-
-    Attributes:
-        result_id     (str)  :The unique identifier for the result that was chosen.
-        sender (User) :The user that chose the result.
-        location (Location) :*Optional.* Sender location, only for bots that require user location
-        inline_message_id (str) :*Optional.* Identifier of the sent inline message. Available only
-                                 if there is an inline keyboard attached to the message. Will be
-                                 also received in callback queries and can be used to edit the message.
-        query  (str)  :The query that was used to obtain the result.
-
-    """
-    __slots__ = ()
-
-    @staticmethod
-    def from_result(result):
-        if result is None:
-            return None
-
-        return ChosenInlineResult(
-            result_id=result.get('result_id'),
-            sender=User.from_result(result.get('from')),
-            location=Location.from_result(result.get('location')),
-            inline_message_id=result.get('inline_message_id'),
-            query=result.get('query'),
-            )
-
-_CallbackQueryBase = namedtuple('CallbackQuery', ['id', 'sender', 'message', 'inline_message_id', 'data'])
-class CallbackQuery(_CallbackQueryBase):
-    """ This object represents an incoming callback query from a callback button in an inline keyboard. If
-        the button that originated the query was attached to a message sent by the bot, the field message
-        will be presented. If the button was attached to a message sent via the bot (in inline mode), the
-        field inline_message_id will be presented.
-
-
-    Attributes:
-        id                 (str)      :Unique identifier for this query.
-        sender             (User)     :Sender.
-        message            (Message)  :*Optional.* Message with the callback button that originated the query. Note
-                                       that message content and message date will not be available if the message is too old
-        inline_message_id  (str)      :*Optional.* Identifier of the message sent via the bot in inline mode, that originated the query
-        data               (str)      :Data associated with the callback button. Be aware that a bad client can send arbitrary data in this field
-
-    """
-    __slots__ = ()
-
-    @staticmethod
-    def from_result(result):
-        if result is None:
-            return None
-
-        return CallbackQuery(
-            id=result.get('id'),
-            sender=User.from_result(result.get('from')),
-            message=Message.from_result(result.get('message')),
-            inline_message_id=result.get('inline_message_id'),
-            data=result.get('data'),
         )
 
-class InlineKeyboardMarkup:
-    """ This object represents an inline keyboard that appears right next to the message it belongs to.
-
-    Attributes:
-        inline_keyboard     (Sequence[Sequence[InlineKeyboardButton]])  :Array of button rows, each represented by an Array of InlineKeyboardButton objects
-    """
-
-    def __init__(self, inline_keyboard):
-        self.inline_keyboard = inline_keyboard
-
-    def serialize(self):
-        return json.dumps(self.asdict())
-
-    def asdict(self):
-        inline_keyboard = []
-
-        for button_list in self.inline_keyboard:
-            temp_list = []
-            for button in button_list:
-                temp_list.append(button.serialize())
-            inline_keyboard.append(temp_list)
-
-        return dict(inline_keyboard=inline_keyboard)
-
-class InlineKeyboardButton:
-    """ This object represents one button of an inline keyboard. You must use exactly one of the optional fields.
-
-    Attributes:
-        text     (str)  :Label text on the button
-        url      (str)  :*Optional.* HTTP url to be opened when button is pressed
-        callback_data (str) :*Optional.* Data to be sent in a callback query to the bot when button is pressed
-
-        switch_inline_query (str) :*Optional.* If set, pressing the button will prompt the user to select
-                                   one of their chats, open that chat and insert the bot‘s username and
-                                   the specified inline query in the input field. Can be empty, in which case just the bot’s username will be inserted.
-
-                                   Note: This offers an easy way for users to start using your bot in inline mode when they are currently in a private
-                                   chat with it. Especially useful when combined with switch_pm… actions – in this case the user will be automatically
-                                   returned to the chat they switched from, skipping the chat selection screen.
-        switch_inline_query_current_chat (str) :*Optional.* If set, pressing the button will insert the bot‘s username and the specified inline query
-                                                in the current chat's input field. Can be empty, in which case only the bot’s username will be inserted.
-
-                                                This offers a quick way for the user to open your bot in inline mode in the same chat – good for
-                                                selecting something from multiple options.
-        callback_game (str) :*Optional.*  Description of the game that will be launched when the user presses the button.
-
-                                          NOTE: This type of button must always be the first button in the first row.
-    """
-
-    def __init__(self, text, url=None, callback_data=None, switch_inline_query=None, switch_inline_query_current_chat=None, callback_game=None):
-        self.text = text
-        self.url = url
-        self.callback_data = str(callback_data)
-        self.switch_inline_query = switch_inline_query
-        self.switch_inline_query_current_chat = switch_inline_query_current_chat
-        self.callback_game = callback_game
-
-        if url is None and callback_data is None and switch_inline_query is None:
-            raise ValueError("You must use exactly one of the optional fields.")
-
-    def serialize(self):
-        reply_markup = dict()
-
-        reply_markup['text'] = self.text
-        if self.url is not None:
-            reply_markup['url'] = self.url
-        if self.callback_data is not None:
-            reply_markup['callback_data'] = self.callback_data
-        if self.switch_inline_query is not None:
-            reply_markup['switch_inline_query'] = self.switch_inline_query
-        if self.switch_inline_query_current_chat is not None:
-            reply_markup['switch_inline_query_current_chat'] = self.switch_inline_query_current_chat
-
-        return reply_markup
-
-"""
-InlineQuery Types
-"""
 
 class InlineQueryResult:
     pass
@@ -1207,20 +1140,20 @@ class InlineQueryResultPhoto(InlineQueryResult):
     """
 
     def __init__(self, id, photo_url,
-                 mime_type=None, photo_width=None, photo_height=None, thumb_url=None, title=None,
-                 description=None, caption=None, input_message_content=None, reply_markup=None):
+                 mime_type=None, photo_width=None, thumb_url=None, photo_height=None, title=None,
+                 description=None, caption=None, reply_markup=None, input_message_content=None):
         self.type = "photo"
         self.id = id
         self.photo_url = photo_url
+        self.thumb_url = thumb_url
         self.mime_type = mime_type
         self.photo_width = photo_width
         self.photo_height = photo_height
-        self.thumb_url = thumb_url
         self.title = title
         self.description = description
         self.caption = caption
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultCachedPhoto(InlineQueryResult):
@@ -1240,15 +1173,16 @@ class InlineQueryResultCachedPhoto(InlineQueryResult):
     """
 
     def __init__(self, id, photo_file_id, title=None, description=None, caption=None,
-                 input_message_content=None, reply_markup=None):
+                 reply_markup=None, input_message_content=None):
         self.type = "photo"
         self.id = id
         self.photo_file_id = photo_file_id
         self.title = title
         self.description = description
         self.caption = caption
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
+
 
 class InlineQueryResultGif(InlineQueryResult):
     """ Represents a link to an animated GIF file. By default, this animated GIF file will be sent by the user with
@@ -1270,7 +1204,7 @@ class InlineQueryResultGif(InlineQueryResult):
 
     def __init__(self, id, gif_url,
                  gif_width=None, gif_height=None, thumb_url=None, title=None,
-                 caption=None, input_message_content=None, reply_markup=None):
+                 caption=None, reply_markup=None, input_message_content=None):
         self.type = "gif"
         self.id = id
         self.gif_url = gif_url
@@ -1279,8 +1213,8 @@ class InlineQueryResultGif(InlineQueryResult):
         self.thumb_url = thumb_url
         self.title = title
         self.caption = caption
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultCachedGif(InlineQueryResult):
@@ -1300,14 +1234,14 @@ class InlineQueryResultCachedGif(InlineQueryResult):
     """
 
     def __init__(self, id, gif_file_id, title=None,
-                 caption=None, input_message_content=None, reply_markup=None):
+                 caption=None, reply_markup=None, input_message_content=None):
         self.type = "gif"
         self.id = id
         self.gif_file_id = gif_file_id
         self.title = title
         self.caption = caption
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultMpeg4Gif(InlineQueryResult):
@@ -1329,7 +1263,7 @@ class InlineQueryResultMpeg4Gif(InlineQueryResult):
 
     def __init__(self, id, mpeg4_url,
                  mpeg4_width=None, mpeg4_height=None, thumb_url=None, title=None,
-                 caption=None, input_message_content=None, reply_markup=None):
+                 caption=None, reply_markup=None, input_message_content=None):
         self.type = "mpeg4_gif"
         self.id = id
         self.mpeg4_url = mpeg4_url
@@ -1338,8 +1272,8 @@ class InlineQueryResultMpeg4Gif(InlineQueryResult):
         self.thumb_url = thumb_url
         self.title = title
         self.caption = caption
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultCachedMpeg4Gif(InlineQueryResult):
@@ -1356,15 +1290,15 @@ class InlineQueryResultCachedMpeg4Gif(InlineQueryResult):
         reply_markup             (InlineKeyboardMarkup) :*Optional.* Inline keyboard attached to the message
         input_message_content    (InputMessageContent) :*Optional.*Content of the message to be sent instead of the video animation
     """
-    def __init__(self, id, mpeg4_file_id, title=None, caption=None, input_message_content=None, reply_markup=None):
+
+    def __init__(self, id, mpeg4_file_id, title=None, caption=None, reply_markup=None, input_message_content=None):
         self.type = "mpeg4_gif"
         self.id = id
         self.mpeg4_file_id = mpeg4_file_id
         self.title = title
         self.caption = caption
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
-
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultVideo(InlineQueryResult):
@@ -1385,21 +1319,22 @@ class InlineQueryResultVideo(InlineQueryResult):
 
     """
 
-    def __init__(self, id, video_url, mime_type, title=None,
-                 video_width=None, video_height=None, video_duration=None, thumb_url=None,
-                 description=None, input_message_content=None, reply_markup=None):
+    def __init__(self, id, video_url, mime_type, thumb_url=None, title=None, caption=None,
+                 video_width=None, video_height=None, video_duration=None,
+                 description=None, reply_markup=None, input_message_content=None):
         self.type = "video"
         self.id = id
         self.video_url = video_url
         self.mime_type = mime_type
+        self.thumb_url = thumb_url
+        self.title = title
+        self.caption = caption
         self.video_width = video_width
         self.video_height = video_height
         self.video_duration = video_duration
-        self.thumb_url = thumb_url
-        self.title = title
         self.description = description
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultCachedVideo(InlineQueryResult):
@@ -1417,14 +1352,16 @@ class InlineQueryResultCachedVideo(InlineQueryResult):
 
     """
 
-    def __init__(self, id, video_file_id, title, description=None, input_message_content=None, reply_markup=None):
+    def __init__(self, id, video_file_id, title, caption=None, description=None,
+                 reply_markup=None, input_message_content=None):
         self.type = "video"
         self.id = id
         self.video_file_id = video_file_id
         self.title = title
         self.description = description
-        self.input_message_content = input_message_content
+        self.caption = caption
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultAudio(InlineQueryResult):
@@ -1443,16 +1380,17 @@ class InlineQueryResultAudio(InlineQueryResult):
 
     """
 
-    def __init__(self, id, audio_url, title, caption=None, performer=None, audio_duration=None, input_message_content=None, reply_markup=None):
+    def __init__(self, id, audio_url, title, caption=None, performer=None, audio_duration=None,
+                 reply_markup=None, input_message_content=None):
         self.type = "audio"
         self.id = id
         self.audio_url = audio_url
+        self.title = title
         self.caption = caption
         self.performer = performer
         self.audio_duration = audio_duration
-        self.title = title
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultCachedAudio(InlineQueryResult):
@@ -1470,14 +1408,13 @@ class InlineQueryResultCachedAudio(InlineQueryResult):
 
     """
 
-    def __init__(self, id, audio_file_id, title, caption=None, input_message_content=None, reply_markup=None):
+    def __init__(self, id, audio_file_id, caption=None, reply_markup=None, input_message_content=None):
         self.type = "audio"
         self.id = id
         self.audio_file_id = audio_file_id
-        self.title = title
         self.caption = caption
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultVoice(InlineQueryResult):
@@ -1496,15 +1433,16 @@ class InlineQueryResultVoice(InlineQueryResult):
 
     """
 
-    def __init__(self, id, voice_url, title, caption=None, voice_duration=None, input_message_content=None, reply_markup=None):
+    def __init__(self, id, voice_url, title, caption=None, voice_duration=None,
+                 reply_markup=None, input_message_content=None):
         self.type = "voice"
         self.id = id
         self.voice_url = voice_url
         self.caption = caption
         self.voice_duration = voice_duration
         self.title = title
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultCachedVoice(InlineQueryResult):
@@ -1523,14 +1461,14 @@ class InlineQueryResultCachedVoice(InlineQueryResult):
 
     """
 
-    def __init__(self, id, voice_file_id, title, caption=None, input_message_content=None, reply_markup=None):
+    def __init__(self, id, voice_file_id, title, caption=None, reply_markup=None, input_message_content=None):
         self.type = "voice"
         self.id = id
         self.voice_file_id = voice_file_id
         self.title = title
         self.caption = caption
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultDocument(InlineQueryResult):
@@ -1552,17 +1490,17 @@ class InlineQueryResultDocument(InlineQueryResult):
         thumb_height             (int)  :*Optional.* Thumbnail height
     """
 
-    def __init__(self, id, document_url, title, mime_type, caption=None, description=None, input_message_content=None, reply_markup=None,
-                 thumb_url=None, thumb_width=None, thumb_height=None):
+    def __init__(self, id, document_url, title, mime_type, caption=None, description=None,
+                 reply_markup=None, input_message_content=None, thumb_url=None, thumb_width=None, thumb_height=None):
         self.type = "document"
         self.id = id
+        self.title = title
+        self.caption = caption
         self.document_url = document_url
         self.mime_type = mime_type
-        self.caption = caption
         self.description = description
-        self.title = title
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
         self.thumb_url = thumb_url
         self.thumb_width = thumb_width
         self.thumb_height = thumb_height
@@ -1583,15 +1521,16 @@ class InlineQueryResultCachedDocument(InlineQueryResult):
         input_message_content    (InputMessageContent) :*Optional.* Content of the message to be sent instead of the document
     """
 
-    def __init__(self, id, document_file_id, title, caption=None, description=None, input_message_content=None, reply_markup=None):
+    def __init__(self, id, document_file_id, title, caption=None, description=None,
+                 reply_markup=None, input_message_content=None):
         self.type = "document"
         self.id = id
         self.document_file_id = document_file_id
-        self.caption = caption
         self.description = description
+        self.caption = caption
         self.title = title
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
 
 
 class InlineQueryResultLocation(InlineQueryResult):
@@ -1611,15 +1550,15 @@ class InlineQueryResultLocation(InlineQueryResult):
         thumb_height             (int)  :*Optional.* Thumbnail height
     """
 
-    def __init__(self, id, latitude, longitude, title, input_message_content=None, reply_markup=None,
+    def __init__(self, id, latitude, longitude, title, reply_markup=None, input_message_content=None,
                  thumb_url=None, thumb_width=None, thumb_height=None):
         self.type = "location"
         self.id = id
         self.latitude = latitude
         self.longitude = longitude
         self.title = title
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
         self.thumb_url = thumb_url
         self.thumb_width = thumb_width
         self.thumb_height = thumb_height
@@ -1643,9 +1582,8 @@ class InlineQueryResultVenue(InlineQueryResult):
         thumb_height             (int)  :*Optional.* Thumbnail height
     """
 
-    def __init__(self, id, latitude, longitude, title, address, foursquare_id=None,
-                 input_message_content=None, reply_markup=None,
-                 thumb_url=None, thumb_width=None, thumb_height=None):
+    def __init__(self, id, latitude, longitude, title, address, foursquare_id=None, reply_markup=None,
+                 input_message_content=None, thumb_url=None, thumb_width=None, thumb_height=None):
         self.type = "venue"
         self.id = id
         self.latitude = latitude
@@ -1653,8 +1591,8 @@ class InlineQueryResultVenue(InlineQueryResult):
         self.title = title
         self.address = address
         self.foursquare_id = foursquare_id
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
         self.thumb_url = thumb_url
         self.thumb_width = thumb_width
         self.thumb_height = thumb_height
@@ -1678,44 +1616,24 @@ class InlineQueryResultContact(InlineQueryResult):
         thumb_height             (int)  :*Optional.* Thumbnail height
     """
 
-    def __init__(self, id, phone_number, first_name, last_name=None,
-                 input_message_content=None, reply_markup=None,
-                 thumb_url=None, thumb_width=None, thumb_height=None):
+    def __init__(self, id, phone_number, first_name, last_name=None, reply_markup=None,
+                 input_message_content=None, thumb_url=None, thumb_width=None, thumb_height=None):
         self.type = "contact"
         self.id = id
         self.phone_number = phone_number
         self.first_name = first_name
         self.last_name = last_name
-        self.input_message_content = input_message_content
         self.reply_markup = reply_markup
+        self.input_message_content = input_message_content
         self.thumb_url = thumb_url
         self.thumb_width = thumb_width
         self.thumb_height = thumb_height
 
 
-class InlineQueryResultContact(InlineQueryResult):
-    """ Represents a link to a sticker stored on the Telegram servers. By default, this sticker will be sent by the
-    user. Alternatively, you can use input_message_content to send a message with the specified content instead
-    of the sticker.
-
-    Attributes:
-        id                       (str)     :Unique identifier for this result, 1-64 bytes
-        sticker_file_id          (str)     :A valid file identifier of the sticker
-        reply_markup             (InlineKeyboardMarkup) :*Optional.* Inline keyboard attached to the message
-        input_message_content    (InputMessageContent) :*Optional.* Content of the message to be sent instead of the document
-    """
-
-    def __init__(self, id, sticker_file_id, input_message_content=None, reply_markup=None):
-        self.type = "sticker"
-        self.id = id
-        self.sticker_file_id = sticker_file_id
-        self.input_message_content = input_message_content
-        self.reply_markup = reply_markup
-
-
 class InputMessageContent:
     """ This object represents the content of a message to be sent as a result of an inline query. """
     pass
+
 
 class InputTextMessageContent(InputMessageContent):
     """
@@ -1783,16 +1701,156 @@ class InputContactMessageContent(InputMessageContent):
         self.first_name = first_name
         self.last_name = last_name
 
+
+_ChosenInlineResultBase = namedtuple('ChosenInlineResult', ['result_id', 'sender', 'query'])
+
+
+class ChosenInlineResult(_ChosenInlineResultBase):
+    """ This object represents an incoming inline query. When the user sends an empty query,
+        your bot could return some default or trending results.
+
+    Attributes:
+        result_id     (str)  :The unique identifier for the result that was chosen.
+        sender (User) :The user that chose the result.
+        location (Location) :*Optional.* Sender location, only for bots that require user location
+        inline_message_id (str) :*Optional.* Identifier of the sent inline message. Available only
+                                 if there is an inline keyboard attached to the message. Will be
+                                 also received in callback queries and can be used to edit the message.
+        query  (str)  :The query that was used to obtain the result.
+
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+
+        return ChosenInlineResult(
+            result_id=result.get('result_id'),
+            sender=User.from_result(result.get('from')),
+            location=Location.from_result(result.get('location')),
+            inline_message_id=result.get('inline_message_id'),
+            query=result.get('query'),
+        )
+
+
+_GameBase = namedtuple('Game', ['title', 'description', 'photo', 'text', 'text_entities', 'animation'])
+
+
+class Game(_GameBase):
+    """This object represents a game. Use BotFather to create and edit games, their short names will act as unique identifiers.
+
+
+    Attributes:
+        title          (str)                     :Title of the game
+        description    (str)                     :Description of the game
+        photo          (Sequence[PhotoSize])     :Photo that will be displayed in the game message in chats.
+        text           (str)                     :*Optional.* Brief description of the game or high scores included in the game message. Can be automatically
+                                                              edited to include current high scores for the game when the bot calls setGameScore, or manually
+                                                              edited using editMessageText. 0-4096 characters.
+        text_entities  (Sequence[MessageEntity]) :*Optional.* Special entities that appear in text, such as usernames, URLs, bot commands, etc.
+        animation      (Animation)               :*Optional.* Animation that will be displayed in the game message in chats. Upload via BotFather
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+
+        # photo is a list of PhotoSize
+        photo = result.get('photo')
+        if photo is not None:
+            photo = [PhotoSize.from_result(photo_size) for photo_size in photo]
+
+        # entities is a list of MessageEntity
+        text_entities = result.get('entities')
+        if text_entities is not None:
+            text_entities = [MessageEntity.from_result(entity) for entity in text_entities]
+
+        return Game(
+            title=result.get('title'),
+            description=result.get('description'),
+            photo=photo,
+            text=result.get('text'),
+            text_entities=text_entities,
+            animation=Animation.from_result(result.get('animation')),
+        )
+
+
+_AnimationBase = namedtuple('Animation', ['file_id', 'thumb', 'file_name', 'mime_type', 'file_size'])
+
+
+class Animation(_GameBase):
+    """You can provide an animation for your game so that it looks stylish in chats. This object represents an animation file to be
+    displayed in the message containing a game.
+
+    Attributes:
+        file_id    (str)        :Unique file identifier
+        thumb      (PhotoSize)  :*Optional.* Animation thumbnail as defined by sender
+        file_name  (str)        :*Optional.* Original animation filename as defined by sender
+        mime_type  (str)        :*Optional.* MIME type of the file as defined by sender
+        file_size  (int)        :*Optional.* File size
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+
+        return Animation(
+            file_id=result.get('file_id'),
+            thumb=PhotoSize.from_result(result.get('thumb')),
+            file_name=result.get('file_name'),
+            mime_type=result.get('mime_type'),
+            file_size=result.get('file_size')
+        )
+
+
+_GameHighScoreBase = namedtuple('GameHighScore', ['position', 'user', 'score'])
+
+
+class GameHighScore(_GameHighScoreBase):
+    """
+    This object represents one row of the high scores table for a game.
+
+    Attributes:
+        position    (int)  :Position in high score table for the game
+        user        (User) :User
+        score       (int)  :Score
+    """
+
+    __slots__ = ()
+
+    @staticmethod
+    def from_result(result):
+        if result is None:
+            return None
+
+        return GameHighScore(
+            position=result.get('position'),
+            user=User.from_result(result.get('user')),
+            score=result.get('score'),
+        )
+
+    @staticmethod
+    def from_array_result(result):
+        if result is None:
+            return None
+
+        [GameHighScore.from_result(score) for score in result]
+
+
 """
 Types added for utility purposes
 """
-
 
 _ErrorBase = namedtuple('Error', ['error_code', 'description'])
 
 
 class Error(_ErrorBase):
-
     """The error code and message returned when a request was successfuly but the method call was invalid
 
     Attributes:
@@ -1807,13 +1865,13 @@ class Error(_ErrorBase):
     def from_result(result):
         return Error(error_code=result.get('error_code'), description=result.get('description'))
 
+
 """
 RPC Objects
 """
 
 
 class RequestMethod(str, Enum):
-
     """Used to specify the HTTP request method.
 
     Attributes:
@@ -1832,7 +1890,6 @@ class RequestMethod(str, Enum):
 
 
 class TelegramBotRPCRequest:
-
     """Class that handles creating the actual RPC request, and sending callbacks based on response
 
     :param api_method: The API method to call. See https://core.telegram.org/bots/api#available-methods
@@ -1902,24 +1959,29 @@ class TelegramBotRPCRequest:
             data = self.params
         if self.files is not None:
             files = self.files
-
         return Request(self.request_method, self._get_url(), data=data, files=files).prepare()
 
     def _async_call(self):
         self.error = None
         self.response = None
 
-        s = Session()
-        request = self._get_request()
-        resp = s.send(request)
+        try:
+            s = Session()
+            request = self._get_request()
+            resp = s.send(request)
+        except TimeoutError:
+            return None
+        except Exception:
+            return None
 
-        if resp.status_code == 200:
-            try:
-                api_response = resp.json()
-            except ValueError:
+        try:
+            api_response = resp.json()
+        except ValueError:
+            if resp.status_code == 200:
                 api_response = {'ok': False, 'description': 'Invalid Value in JSON response', 'error_code': None}
-        else:
-            api_response = {'ok': False, 'description': 'API doesn\'t answer', 'error_code': resp.status_code}
+            else:
+                api_response = {'ok': False, 'description': 'API doesn\'t answer', 'error_code':
+                    resp.status_code}
 
         if api_response.get('ok'):
             result = api_response['result']
@@ -1960,7 +2022,6 @@ class TelegramBotRPCRequest:
 
 
 class TelegramDownloadRequest(TelegramBotRPCRequest):
-
     """Class that handles downloading files from telegram.
 
     :param file_path: The remote file path received via :func:`get_file`
@@ -2136,7 +2197,7 @@ def forward_message(chat_id, from_chat_id, message_id, disable_notification=Fals
     return TelegramBotRPCRequest('forwardMessage', params=params, on_result=Message.from_result, **kwargs)
 
 
-def send_photo(chat_id,  photo,
+def send_photo(chat_id, photo,
                caption=None, reply_to_message_id=None, reply_markup=None, disable_notification=False,
                **kwargs):
     """
@@ -2358,14 +2419,16 @@ def send_sticker(chat_id, sticker,
 
 
 def send_video(chat_id, video,
-               duration=None, caption=None, reply_to_message_id=None, reply_markup=None, disable_notification=False,
+               duration=None, caption=None, width=None, height=None, reply_to_message_id=None, reply_markup=None, \
+               disable_notification=False,
                **kwargs):
     """
     Use this method to send video files, Telegram clients support mp4 videos (other formats may be sent as Document).
 
     :param chat_id: Unique identifier for the message recipient — User or GroupChat id
-    :param video: Video to send. Pass a file_id as String to send a video that exists on the Telegram servers (recommended),
-                  pass an HTTP URL as a String for Telegram to get a video from the Internet, or upload a new video using multipart/form-data.
+    :param video: Video to send. You can either pass a file_id as String to resend a
+                  video that is already on the Telegram servers, or upload a new video
+                  using multipart/form-data.
     :param duration: Duration of sent video in seconds
     :param caption: Video caption (may also be used when resending videos by file_id)
     :param reply_to_message_id: If the message is a reply, ID of the original message
@@ -2403,6 +2466,8 @@ def send_video(chat_id, video,
     params.update(
         _clean_params(
             duration=duration,
+            width=width,
+            height=height,
             caption=caption,
             reply_to_message_id=reply_to_message_id,
             reply_markup=reply_markup,
@@ -2517,10 +2582,10 @@ def send_location(chat_id, latitude, longitude,
 
     return TelegramBotRPCRequest('sendLocation', params=params, on_result=Message.from_result, **kwargs)
 
+
 def send_venue(chat_id, latitude, longitude, title, address,
                foursquare_id=None, reply_to_message_id=None, reply_markup=None, disable_notification=False,
                **kwargs):
-
     """
     Use this method to send information about a venue.
 
@@ -2578,7 +2643,6 @@ def send_venue(chat_id, latitude, longitude, title, address,
 def send_contact(chat_id, phone_number, first_name,
                  last_name=None, reply_to_message_id=None, reply_markup=None, disable_notification=False,
                  **kwargs):
-
     """
     Use this method to send phone contacts.
 
@@ -2627,6 +2691,7 @@ def send_contact(chat_id, phone_number, first_name,
 
     return TelegramBotRPCRequest('sendContact', params=params, on_result=Message.from_result, **kwargs)
 
+
 class ChatAction(str, Enum):
     TEXT = 'typing'
     PHOTO = 'upload_photo'
@@ -2673,221 +2738,217 @@ def send_chat_action(chat_id, action,
 
 
 def kick_chat_member(chat_id, user_id, **kwargs):
+    """
+    Use this method to kick a user from a group or a supergroup. In the case of supergroups, the user will not
+    be able to return to the group on their own using invite links, etc., unless unbanned first. The bot must
+    be an administrator in the group for this to work. Returns True on success.
 
-        """
-        Use this method to kick a user from a group or a supergroup. In the case of supergroups, the user will not
-        be able to return to the group on their own using invite links, etc., unless unbanned first. The bot must
-        be an administrator in the group for this to work. Returns True on success.
+    Note: This will method only work if the ‘All Members Are Admins’ setting is off in the target group. Otherwise
+    members may only be removed by the group's creator or by the member that added them.
 
-        Note: This will method only work if the ‘All Members Are Admins’ setting is off in the target group. Otherwise
-        members may only be removed by the group's creator or by the member that added them.
+    :param chat_id: Unique identifier for the target group or username of the target supergroup (in the format @supergroupusername)
+    :param user_id: Unique identifier of the target user
+    :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
 
-        :param chat_id: Unique identifier for the target group or username of the target supergroup (in the format @supergroupusername)
-        :param user_id: Unique identifier of the target user
-        :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
+    :type chat_id: int or str
+    :type user_id: int
 
-        :type chat_id: int or str
-        :type user_id: int
+    :returns: Returns True on success.
+    :rtype: bool
+    """
 
-        :returns: Returns True on success.
-        :rtype: bool
-        """
+    # required args
+    params = dict(
+        chat_id=chat_id,
+        user_id=user_id,
+    )
 
-        # required args
-        params = dict(
-            chat_id=chat_id,
-            user_id=user_id,
-        )
+    return TelegramBotRPCRequest('kickChatMember', params=params, on_result=lambda result: result, **kwargs)
 
-        return TelegramBotRPCRequest('kickChatMember', params=params, on_result=lambda result: result, **kwargs)
 
 def unban_chat_member(chat_id, user_id, **kwargs):
+    """
+    Use this method to unban a previously kicked user in a supergroup. The user will not return to the group automatically,
+    but will be able to join via link, etc. The bot must be an administrator in the group for this to work
 
-        """
-        Use this method to unban a previously kicked user in a supergroup. The user will not return to the group automatically,
-        but will be able to join via link, etc. The bot must be an administrator in the group for this to work
+    :param chat_id: Unique identifier for the target group or username of the target supergroup (in the format @supergroupusername)
+    :param user_id: Unique identifier of the target user
+    :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
 
-        :param chat_id: Unique identifier for the target group or username of the target supergroup (in the format @supergroupusername)
-        :param user_id: Unique identifier of the target user
-        :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
+    :type chat_id: int or str
+    :type user_id: int
 
-        :type chat_id: int or str
-        :type user_id: int
+    :returns: Returns True on success.
+    :rtype: bool
+    """
 
-        :returns: Returns True on success.
-        :rtype: bool
-        """
+    # required args
+    params = dict(
+        chat_id=chat_id,
+        user_id=user_id,
+    )
 
-        # required args
-        params = dict(
-            chat_id=chat_id,
-            user_id=user_id,
-        )
-
-        return TelegramBotRPCRequest('unbanChatMember', params=params, on_result=lambda result: result, **kwargs)
+    return TelegramBotRPCRequest('unbanChatMember', params=params, on_result=lambda result: result, **kwargs)
 
 
 def get_chat(chat_id, **kwargs):
+    """
+    Use this method to get up to date information about the chat (current name of the user for one-on-one conversations, current username
+    of a user, group or channel, etc.).
 
-        """
-        Use this method to get up to date information about the chat (current name of the user for one-on-one conversations, current username
-        of a user, group or channel, etc.).
 
+    :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+    :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
 
-        :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-        :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
+    :type chat_id: int or str
 
-        :type chat_id: int or str
+    :returns: Returns a Chat object on success.
+    :rtype: Chat
+    """
 
-        :returns: Returns a Chat object on success.
-        :rtype: Chat
-        """
+    # required args
+    params = dict(
+        chat_id=chat_id,
+    )
 
-        # required args
-        params = dict(
-            chat_id=chat_id,
-        )
-
-        return TelegramBotRPCRequest('getChat', params=params, on_result=lambda result: Chat.from_result(result), **kwargs)
+    return TelegramBotRPCRequest('getChat', params=params, on_result=lambda result: Chat.from_result(result), **kwargs)
 
 
 def leave_chat(chat_id, **kwargs):
+    """
+    Use this method for your bot to leave a group, supergroup or channel.
 
-        """
-        Use this method for your bot to leave a group, supergroup or channel.
+    :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+    :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
 
-        :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-        :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
+    :type chat_id: int or str
 
-        :type chat_id: int or str
+    :returns: Returns true on success.
+    :rtype: bool
+    """
 
-        :returns: Returns true on success.
-        :rtype: bool
-        """
+    # required args
+    params = dict(
+        chat_id=chat_id,
+    )
 
-        # required args
-        params = dict(
-            chat_id=chat_id,
-        )
-
-        return TelegramBotRPCRequest('leaveChat', params=params, on_result=lambda result: result, **kwargs)
+    return TelegramBotRPCRequest('leaveChat', params=params, on_result=lambda result: result, **kwargs)
 
 
 def get_chat_administrators(chat_id, **kwargs):
+    """
+    Use this method to get a list of administrators in a chat. On success, returns an Array of ChatMember objects that
+    contains information about all chat administrators except other bots. If the chat is a group or a supergroup and no
+    administrators were appointed, only the creator will be returned.
 
-        """
-        Use this method to get a list of administrators in a chat. On success, returns an Array of ChatMember objects that
-        contains information about all chat administrators except other bots. If the chat is a group or a supergroup and no
-        administrators were appointed, only the creator will be returned.
 
+    :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+    :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
 
-        :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-        :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
+    :type chat_id: int or str
 
-        :type chat_id: int or str
+    :returns: List of Chat Members on success.
+    :rtype: list[ChatMember]
+    """
 
-        :returns: List of Chat Members on success.
-        :rtype: list[ChatMember]
-        """
+    # required args
+    params = dict(
+        chat_id=chat_id,
+    )
 
-        # required args
-        params = dict(
-            chat_id=chat_id,
-        )
-
-        return TelegramBotRPCRequest('getChatAdministrators', params=params, on_result=lambda result: ChatMember.from_result_list(result), **kwargs)
+    return TelegramBotRPCRequest('getChatAdministrators', params=params,
+                                 on_result=lambda result: ChatMember.from_result_list(result), **kwargs)
 
 
 def get_chat_member(chat_id, user_id, **kwargs):
+    """
+    Use this method to get information about a member of a chat
 
-        """
-        Use this method to get information about a member of a chat
+    :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+    :param user_id: Unique identifier of the target user
+    :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
 
-        :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-        :param user_id: Unique identifier of the target user
-        :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
+    :type chat_id: int or str
+    :type user_id: int
 
-        :type chat_id: int or str
-        :type user_id: int
+    :returns: Returns ChatMember on success.
+    :rtype: ChatMember
+    """
 
-        :returns: Returns ChatMember on success.
-        :rtype: ChatMember
-        """
+    # required args
+    params = dict(
+        chat_id=chat_id,
+        user_id=user_id,
+    )
 
-        # required args
-        params = dict(
-            chat_id=chat_id,
-            user_id=user_id,
-        )
-
-        return TelegramBotRPCRequest('getChatMember', params=params, on_result=lambda result: ChatMember.from_result(result), **kwargs)
+    return TelegramBotRPCRequest('getChatMember', params=params,
+                                 on_result=lambda result: ChatMember.from_result(result), **kwargs)
 
 
 def get_chat_members_count(chat_id, **kwargs):
+    """
+    Use this method to get the number of members in a chat.
 
-        """
-        Use this method to get the number of members in a chat.
+    :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+    :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
 
-        :param chat_id: Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-        :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
+    :type chat_id: int or str
 
-        :type chat_id: int or str
+    :returns: Returns count on success.
+    :rtype: int
+    """
 
-        :returns: Returns count on success.
-        :rtype: int
-        """
+    # required args
+    params = dict(
+        chat_id=chat_id,
+    )
 
-        # required args
-        params = dict(
-            chat_id=chat_id,
-        )
-
-        return TelegramBotRPCRequest('getChatMembersCount', params=params, on_result=lambda result: result, **kwargs)
+    return TelegramBotRPCRequest('getChatMembersCount', params=params, on_result=lambda result: result, **kwargs)
 
 
 def answer_callback_query(callback_query_id, text=None, show_alert=None, url=None, cache_time=0, **kwargs):
-        """
-        Use this method to send answers to callback queries sent from inline keyboards. The answer will be displayed
-        to the user as a notification at the top of the chat screen or as an alert.
+    """
+    Use this method to send answers to callback queries sent from inline keyboards. The answer will be displayed
+    to the user as a notification at the top of the chat screen or as an alert.
 
 
-        :param callback_query_id: Unique identifier for the query to be answered
-        :param text: Text of the notification. If not specified, nothing will be shown to the user
-        :param show_alert: If true, an alert will be shown by the client instead of a notificaiton at the top of
-                           the chat screen. Defaults to false.
-        :param url: URL that will be opened by the user's client. If you have created a Game and accepted the conditions via @Botfather,
-                    specify the URL that opens your game – note that this will only work if the query comes from a callback_game button.
-                    Otherwise, you may use links like telegram.me/your_bot?start=XXXX that open your bot with a parameter.
-        :param cache_time: The maximum amount of time in seconds that the result of the callback query may be cached client-side. Telegram
-                           apps will support caching starting in version 3.14. Defaults to 0.
-        :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
+    :param callback_query_id: Unique identifier for the query to be answered
+    :param text: Text of the notification. If not specified, nothing will be shown to the user
+    :param show_alert: If true, an alert will be shown by the client instead of a notificaiton at the top of
+                       the chat screen. Defaults to false.
+    :param url: URL that will be opened by the user's client. If you have created a Game and accepted the conditions via @Botfather,
+                specify the URL that opens your game – note that this will only work if the query comes from a callback_game button.
+                Otherwise, you may use links like telegram.me/your_bot?start=XXXX that open your bot with a parameter.
+    :param cache_time: The maximum amount of time in seconds that the result of the callback query may be cached client-side. Telegram
+                       apps will support caching starting in version 3.14. Defaults to 0.
+    :param \*\*kwargs: Args that get passed down to :class:`TelegramBotRPCRequest`
 
-        :type callback_query_id: str
-        :type text: str
-        :type url: str
-        :type show_alert: bool
-        :type cache_time: int
+    :type callback_query_id: str
+    :type text: str
+    :type url: str
+    :type show_alert: bool
+    :type cache_time: int
 
-        :returns: Returns True on success.
-        :rtype: bool
-        """
+    :returns: Returns True on success.
+    :rtype: bool
+    """
 
-        # required args
-        params = dict(
-            callback_query_id=callback_query_id,
+    # required args
+    params = dict(
+        callback_query_id=callback_query_id,
+    )
+
+    # optional args
+    params.update(
+        _clean_params(
+            text=text,
+            show_alert=show_alert,
+            url=url,
+            cache_time=cache_time,
         )
+    )
 
-        # optional args
-        params.update(
-            _clean_params(
-                text=text,
-                show_alert=show_alert,
-                url=url,
-                cache_time=cache_time,
-            )
-        )
-
-        return TelegramBotRPCRequest('answerCallbackQuery', params=params, on_result=lambda result: result, **kwargs)
+    return TelegramBotRPCRequest('answerCallbackQuery', params=params, on_result=lambda result: result, **kwargs)
 
 
 def edit_message_text(text, chat_id=None, message_id=None, inline_message_id=None,
@@ -2942,6 +3003,7 @@ def edit_message_text(text, chat_id=None, message_id=None, inline_message_id=Non
     )
 
     return TelegramBotRPCRequest('editMessageText', params=params, on_result=Message.from_result, **kwargs)
+
 
 def edit_message_caption(caption, chat_id=None, message_id=None, inline_message_id=None, reply_markup=None, **kwargs):
     """
@@ -3030,7 +3092,8 @@ def edit_message_reply_markup(chat_id=None, message_id=None, inline_message_id=N
     return TelegramBotRPCRequest('editMessageReplyMarkup', params=params, on_result=Message.from_result, **kwargs)
 
 
-def answer_inline_query(inline_query_id, results, cache_time=None, is_personal=None, next_offset=None, switch_pm_text=None, switch_pm_parameter=None, **kwargs):
+def answer_inline_query(inline_query_id, results, cache_time=None, is_personal=None, next_offset=None,
+                        switch_pm_text=None, switch_pm_parameter=None, **kwargs):
     """ Use this method to send answers to an inline query. On success, True is returned.
 
     :param inline_query_id: Unique identifier for the message recipient — String
@@ -3066,17 +3129,26 @@ def answer_inline_query(inline_query_id, results, cache_time=None, is_personal=N
     :rtype: bool
     """
 
-    if next_offset is None:
-        next_offset = ""
-
     json_results = []
     for result in results:
         result_dict = dict((k, v) for k, v in result.__dict__.items() if v)  # Don't serialize None keys.
-        result_dict['input_message_content'] = dict((k, v) for k, v in result_dict['input_message_content'].__dict__.items() if v)  # Serialize InputMessageContent
+        result_dict['input_message_content'] = dict(
+            (k, v) for k, v in result_dict['input_message_content'].__dict__.items() if
+            v)  # Serialize InputMessageContent
 
-        if 'reply_markup' in result_dict:
-            result_dict['reply_markup'] = result_dict['reply_markup'].asdict()
+        keyboard_buttons = result_dict['reply_markup'].inline_keyboard
+        serialized_buttons = []
 
+        for row in keyboard_buttons:
+            new_row = []
+            for column in row:
+                serialized_button = dict((k, v) for k, v in column._asdict().items() if v)
+                new_row.append(serialized_button)
+            serialized_buttons.append(new_row)
+
+        result_dict['reply_markup'] = {
+            'inline_keyboard': serialized_buttons
+        }
         json_results.append(result_dict)
 
     # required args
@@ -3096,7 +3168,7 @@ def answer_inline_query(inline_query_id, results, cache_time=None, is_personal=N
         )
     )
 
-    return TelegramBotRPCRequest('answerInlineQuery', params=params, on_result=lambda result: result, **kwargs)
+    return TelegramBotRPCRequest('answerInlineQuery', params=params, on_result=Message.from_result, **kwargs)
 
 
 def get_user_profile_photos(user_id,
@@ -3228,7 +3300,6 @@ def set_game_score(user_id, score,
     if (chat_id and not message_id) or (not chat_id and message_id):
         raise ValueError("Must specify chat_id and message_id together")
 
-
     # required args
     params = dict(user_id=user_id,
                   score=score)
@@ -3289,7 +3360,7 @@ def get_game_high_scores(user_id,
                                  on_result=GameHighScore.from_array_result, **kwargs)
 
 
-def get_updates(offset=None, limit=None, timeout=None,
+def get_updates(offset=None, limit=None, timeout=None, allowed_updates=None,
                 **kwargs):
     """
     Use this method to receive incoming updates using long polling.
@@ -3314,16 +3385,18 @@ def get_updates(offset=None, limit=None, timeout=None,
     :type offset: int
     :type limit: int
     :type timeout: int
+    :type allowed_updates: array
 
     :returns: An Array of Update objects is returned.
     :rtype: TelegramBotRPCRequest
     """
     # optional parameters
     params = _clean_params(
-            offset=offset,
-            limit=limit,
-            timeout=timeout
-        )
+        offset=offset,
+        limit=limit,
+        timeout=timeout,
+        allowed_updates=allowed_updates
+    )
 
     return TelegramBotRPCRequest('getUpdates', params=params, on_result=Update.from_result, **kwargs)
 
@@ -3358,6 +3431,7 @@ def set_webhook(url=None, certificate=None, **kwargs):
 
     return TelegramBotRPCRequest('setWebhook', params=params, on_result=lambda result: result, **kwargs)
 
+
 def get_webhook_info(**kwargs):
     """
     Use this method to get current webhook status. Requires no parameters.
@@ -3391,7 +3465,6 @@ def download_file(file_path, out_file, **kwargs):
 
 
 class TelegramBot(object):
-
     """A `TelegramBot` object represents a specific regisitered bot user as identified by its token. The bot
     object also helps try to maintain state and simplify interaction for library users.
 
@@ -3429,9 +3502,6 @@ class TelegramBot(object):
 
     def answer_inline_query(self, *args, **kwargs):
         return answer_inline_query(*args, **self._merge_overrides(**kwargs)).run()
-
-    def answer_callback_query(self, *args, **kwargs):
-        return answer_callback_query(*args, **self._merge_overrides(**kwargs)).run()
 
     def send_message(self, *args, **kwargs):
         """See :func:`send_message`"""
